@@ -7,8 +7,8 @@ import os
 
 # Google Drive downloader for the model file only
 def download_file_from_google_drive(file_id, destination):
-    if os.path.exists(destination):
-        return  # already downloaded
+    if os.path.exists(destination) and os.path.getsize(destination) > 1000:
+        return  # already downloaded and not empty
     URL = "https://docs.google.com/uc?export=download"
 
     session = requests.Session()
@@ -29,25 +29,33 @@ def download_file_from_google_drive(file_id, destination):
             if chunk:
                 f.write(chunk)
 
-# Your Google Drive file ID for the random forest model (from your link)
+# Your Google Drive file IDs
 MODEL_FILE_ID = "1iQq39BhysiTvOTey86_C5RojJw3tsbcJ"
-MODEL_PATH = "models/random_forest_tuned_model.joblib"
+FEATURE_COLUMNS_FILE_ID = None  # Assuming you have local feature_columns.joblib already
+NEIGHBOURHOOD_FREQ_DICT_FILE_ID = None  # Assuming local as well
 
+MODEL_PATH = "models/random_forest_tuned_model.joblib"
+FEATURE_COLUMNS_PATH = "models/feature_columns.joblib"
+NEIGHBOURHOOD_FREQ_DICT_PATH = "models/neighbourhood_freq_dict.joblib"
+
+# Ensure models folder exists
 os.makedirs("models", exist_ok=True)
+
+# Download model file if not present
 download_file_from_google_drive(MODEL_FILE_ID, MODEL_PATH)
 
-# Load the model and other files locally
+# Load model and helper objects with caching
 @st.cache_resource
 def load_model():
     return joblib.load(MODEL_PATH)
 
 @st.cache_resource
 def load_feature_columns():
-    return joblib.load("models/feature_columns.joblib")
+    return joblib.load(FEATURE_COLUMNS_PATH)
 
 @st.cache_resource
 def load_neighbourhood_freq_dict():
-    return joblib.load("models/neighbourhood_freq_dict.joblib")
+    return joblib.load(NEIGHBOURHOOD_FREQ_DICT_PATH)
 
 model = load_model()
 feature_columns = load_feature_columns()
