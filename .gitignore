@@ -22,11 +22,6 @@ env/
 *.log
 *.sqlite3
 
-# Model checkpoints and large data files (adjust path if needed)
-models/*.ckpt
-models/*.pt
-models/*.pth
-models/*.joblib
 
 # Ignore Python egg files
 *.egg-info/
@@ -37,6 +32,5 @@ build/
 *.bak
 *.swp
 
-# Keep requirements-dev.txt tracked, do NOT ignore it
-# (no entry for requirements-dev.txt)
+requirements-dev.txt
 
