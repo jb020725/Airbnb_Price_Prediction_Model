@@ -2,11 +2,44 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
+import requests
+import os
 
-# Cache model loading so it's done once per session
+# Google Drive downloader for the model file only
+def download_file_from_google_drive(file_id, destination):
+    if os.path.exists(destination):
+        return  # already downloaded
+    URL = "https://docs.google.com/uc?export=download"
+
+    session = requests.Session()
+    response = session.get(URL, params={'id': file_id}, stream=True)
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            token = value
+            break
+
+    if token:
+        params = {'id': file_id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    CHUNK_SIZE = 32768
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk:
+                f.write(chunk)
+
+# Your Google Drive file ID for the random forest model (from your link)
+MODEL_FILE_ID = "1iQq39BhysiTvOTey86_C5RojJw3tsbcJ"
+MODEL_PATH = "models/random_forest_tuned_model.joblib"
+
+os.makedirs("models", exist_ok=True)
+download_file_from_google_drive(MODEL_FILE_ID, MODEL_PATH)
+
+# Load the model and other files locally
 @st.cache_resource
 def load_model():
-    return joblib.load("models/random_forest_tuned_model.joblib")
+    return joblib.load(MODEL_PATH)
 
 @st.cache_resource
 def load_feature_columns():
@@ -16,16 +49,12 @@ def load_feature_columns():
 def load_neighbourhood_freq_dict():
     return joblib.load("models/neighbourhood_freq_dict.joblib")
 
-# Load once
 model = load_model()
 feature_columns = load_feature_columns()
 neighbourhood_freq_dict = load_neighbourhood_freq_dict()
 
 st.title("🏠 Airbnb Price Prediction")
 
-# --- UI inputs ---
-
-# Neighbourhood selectbox with search
 neighbourhood = st.selectbox(
     "Select Neighbourhood",
     options=sorted(neighbourhood_freq_dict.keys()),
@@ -33,10 +62,8 @@ neighbourhood = st.selectbox(
     help="Choose the neighborhood of the property"
 )
 
-# Map neighbourhood to frequency
 neighbourhood_freq = neighbourhood_freq_dict.get(neighbourhood, 0)
 
-# Host identity verified
 host_identity_verified = st.radio(
     "Host Identity Verified?",
     options=[1, 0],
@@ -44,7 +71,6 @@ host_identity_verified = st.radio(
     format_func=lambda x: "Yes" if x == 1 else "No"
 )
 
-# Instant bookable
 instant_bookable = st.radio(
     "Instant Bookable?",
     options=[1, 0],
@@ -52,7 +78,6 @@ instant_bookable = st.radio(
     format_func=lambda x: "Yes" if x == 1 else "No"
 )
 
-# Construction Year OR Property Age (only one input)
 construction_year = st.number_input(
     "Construction Year",
     min_value=1800,
@@ -61,10 +86,8 @@ construction_year = st.number_input(
     step=1
 )
 
-# Calculate property_age = current_year - construction_year
 property_age = 2025 - construction_year
 
-# Minimum nights
 minimum_nights = st.number_input(
     "Minimum Nights",
     min_value=1,
@@ -73,7 +96,6 @@ minimum_nights = st.number_input(
     step=1
 )
 
-# Number of reviews
 number_of_reviews = st.number_input(
     "Number of Reviews",
     min_value=0,
@@ -82,7 +104,6 @@ number_of_reviews = st.number_input(
     step=1
 )
 
-# Reviews per month
 reviews_per_month = st.number_input(
     "Reviews per Month",
     min_value=0.0,
@@ -92,7 +113,6 @@ reviews_per_month = st.number_input(
     format="%.2f"
 )
 
-# Review rate number (1-5)
 review_rate_number = st.slider(
     "Review Rating (1-5)",
     min_value=1,
@@ -100,7 +120,6 @@ review_rate_number = st.slider(
     value=3
 )
 
-# Availability 365
 availability_365 = st.number_input(
     "Availability (days per year)",
     min_value=0,
@@ -109,7 +128,6 @@ availability_365 = st.number_input(
     step=1
 )
 
-# Cancellation policy (Moderate or Strict or Neither)
 cancellation_policy = st.selectbox(
     "Cancellation Policy",
     options=["None", "Moderate", "Strict"]
@@ -118,7 +136,6 @@ cancellation_policy = st.selectbox(
 cancellation_policy_moderate = cancellation_policy == "Moderate"
 cancellation_policy_strict = cancellation_policy == "Strict"
 
-# Room Type
 room_type = st.selectbox(
     "Room Type",
     options=["Hotel room", "Private room", "Shared room"]
@@ -128,7 +145,6 @@ room_type_hotel = room_type == "Hotel room"
 room_type_private = room_type == "Private room"
 room_type_shared = room_type == "Shared room"
 
-# Last review: choose one method to enter
 last_review_option = st.radio(
     "How to input last review date?",
     options=["Year and Month", "Days Since Last Review"]
@@ -149,7 +165,6 @@ if last_review_option == "Year and Month":
         value=6,
         step=1
     )
-    # Calculate days since last review approx.
     days_since_last_review = (2025 - last_review_year) * 365 + (6 - last_review_month) * 30
     if days_since_last_review < 0:
         days_since_last_review = 0
@@ -161,7 +176,6 @@ else:
         value=1000,
         step=1
     )
-    # If days_since_last_review given, estimate last_review_year and last_review_month roughly
     years_ago = days_since_last_review // 365
     months_ago = (days_since_last_review % 365) // 30
     last_review_year = 2025 - years_ago
@@ -169,8 +183,6 @@ else:
     if last_review_month < 1:
         last_review_month += 12
         last_review_year -= 1
-
-# --- Prepare input dataframe for model ---
 
 input_dict = {
     "host_identity_verified": host_identity_verified,
@@ -195,13 +207,7 @@ input_dict = {
 
 input_df = pd.DataFrame([input_dict], columns=feature_columns)
 
-# --- Predict and display result ---
-
 if st.button("Predict Price"):
-    # Predict log price
     log_price_pred = model.predict(input_df)[0]
-    # Convert back to original price scale
     price_pred = np.expm1(log_price_pred)
     st.success(f"Predicted Price: ${price_pred:,.2f}")
-
-
