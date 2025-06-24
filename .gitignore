@@ -34,4 +34,4 @@ build/
 
 requirements-dev.txt
 
-../models/random_forest_tuned_model.joblib
+models/random_forest_tuned_model.joblib
