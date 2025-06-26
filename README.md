@@ -33,7 +33,7 @@ app.py — Streamlit deployment code.
 
 Contact
 For questions or collaborations, reach out at-
-Contact: [janakbhat34@gmail.com](mailto:janakbhat34@gmail.com)
+[janakbhat34@gmail.com](mailto:janakbhat34@gmail.com)
 
 
 License
