@@ -32,7 +32,8 @@ data/cleaned/ — Processed datasets used for training.
 app.py — Streamlit deployment code.
 
 Contact
-For questions or collaborations, reach out at: janakbhat34@gmail.com
+For questions or collaborations, reach out at Email: [janakbhat34@gmail.com](mailto:janakbhat34@gmail.com)
+
 
 License
 This project is open source and free to use.
