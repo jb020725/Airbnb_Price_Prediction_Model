@@ -1,37 +1,21 @@
-# Byte-compiled / optimized / DLL files
+# Ignore Python virtual environment
+venv/
+.env/
+
+# Ignore Python cache files
 __pycache__/
 *.py[cod]
-*$py.class
 
-# Jupyter checkpoints (ignore all .ipynb_checkpoints folders)
-**/.ipynb_checkpoints/
-
-# Environment folders
-venv/
-env/
-.venv/
-
-# PyCharm, VSCode, other IDE files
-.idea/
-.vscode/
-
-# Mac system files
-.DS_Store
-
-# Logs and databases
-*.log
-*.sqlite3
-
-
-# Ignore Python egg files
-*.egg-info/
-dist/
-build/
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
 
 # Ignore system files
-*.bak
-*.swp
+.DS_Store
+Thumbs.db
 
-requirements-dev.txt
+# Optional: Ignore logs and temp files
+*.log
+*.tmp
 
-models/random_forest_tuned_model.joblib
+#Usefull for developers only
+requirements_dev.txt
